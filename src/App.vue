@@ -118,8 +118,11 @@
         <h3 class="text-lg leading-6 font-medium text-gray-900 my-8">
           {{ selectedTicker.name }} - USD
         </h3>
-        <div class="flex items-end border-gray-600 border-b border-l h-64">
-          <div
+        <div
+            class="flex items-end border-gray-600 border-b border-l h-64"
+            ref="graph"
+        >
+        <div
               v-for="(bar, idx) in normalizedGraph"
               :key="idx"
               :style="{ height: `${bar}%` }"
@@ -191,9 +194,10 @@ export default {
       flagAdded: false,
       page: 1,
       filter: "",
+      maxGraphElements: 1,
     };
   },
-  created: function() {
+  created() {
     const mas = localStorage.getItem(TICKERS_LOCSTORAGE);
     if (mas) {
       this.tickers = JSON.parse(mas);
@@ -204,9 +208,13 @@ export default {
     const windowData = Object.fromEntries(new URL(window.location).searchParams.entries());
     customAssign(VALID_KEYS, windowData, this);
   },
-  // это во vue3 вместо beforeDestroy
-  beforeUnmount: function() {
-    clearInterval();
+
+  mounted() {
+    window.addEventListener("resize", this.calculateMaxGraphElements);
+  },
+
+  beforeUnmount() {
+    window.removeEventListener("resize", this.calculateMaxGraphElements);
   },
   computed: {
     startIndex: function() {
@@ -261,14 +269,24 @@ export default {
     tableOptions(newValue) {
       window.history.pushState(null,document.title, `${window.location.pathname}?filter=${newValue.filter}&page=${newValue.page}`);
     },
-    selectedTicker() {
+    async selectedTicker() {
       this.graph = [];
+      await this.$nextTick();
+      this.calculateMaxGraphElements();
     },
     tickers() {
       localStorage.setItem(TICKERS_LOCSTORAGE, JSON.stringify(this.tickers));
     }
   },
   methods: {
+    calculateMaxGraphElements() {
+      console.log(this.$refs.graph);
+      if (!this.$refs.graph) {
+        return;
+      }
+
+      this.maxGraphElements = this.$refs.graph.clientWidth / 38;
+    },
     add({name, id}) {
         const currentTicker = {
           name: name,
@@ -306,6 +324,11 @@ export default {
           console.log('elm.name ', elm.name);
           if (elm.name === this.selectedTicker?.name) {
             this.graph.push(price);
+            console.log('this.graph.length ', this.graph.length);
+            console.log('this.maxGraphs ', this.maxGraphElements);
+            if (this.graph.length > this.maxGraphElements) {
+              this.graph.splice(0, this.graph.length - this.maxGraphElements);
+            }
           }
         })
     },
