@@ -88,7 +88,7 @@
                 {{ t.name }} - USD
               </dt>
               <dd class="mt-1 text-3xl font-semibold text-gray-900">
-                {{ t.price }}
+                {{ formatPrice(t.price) }}
               </dd>
             </div>
             <div class="w-full border-t border-gray-200"></div>
@@ -175,6 +175,7 @@
 
 <script>
 import {getAllСurrencies, getPrice} from "@/api/baseApi";
+import {customAssign} from "@/utils/common";
 const VALID_KEYS = ['filter', 'page'];
 const TICKERS_LOCSTORAGE = 'cryptonomicon-list';
 const LIMIT = 6;
@@ -196,12 +197,16 @@ export default {
     const mas = localStorage.getItem(TICKERS_LOCSTORAGE);
     if (mas) {
       this.tickers = JSON.parse(mas);
-      this.tickers.forEach(ticker => this.subscribeToUpdates(ticker.name))
+      setInterval(() => this.updateTickers(), 1000);
     }
     this.fetchAllCurrencies();
 
     const windowData = Object.fromEntries(new URL(window.location).searchParams.entries());
-    customAssign(VALID_KEYS, windowData, this.data);
+    customAssign(VALID_KEYS, windowData, this);
+  },
+  // это во vue3 вместо beforeDestroy
+  beforeUnmount: function() {
+    clearInterval();
   },
   computed: {
     startIndex: function() {
@@ -271,7 +276,6 @@ export default {
           id: id,
         };
       this.tickers = [...this.tickers, currentTicker];
-      this.subscribeToUpdates(currentTicker.name);
       this.filter = "";
     },
     addFromInput() {
@@ -286,19 +290,24 @@ export default {
         this.flagAdded = true;
       }
     },
+    formatPrice(price) {
+      if (price === '-') {
+        return price;
+      }
+      return price > 1 ? price.toFixed(2) : price.toPrecision(2);
+    },
     // нужна очистка этого интервала clearInterval(intervalID)
-    subscribeToUpdates(currentTickerName) {
-      setInterval(async () => {
-        const data = await getPrice(currentTickerName);
-        // в апи есть метод чтобы это все одним запросом отправить
-        this.tickers.find(t => t.name === currentTickerName).price =
-            data.USD > 1 ? data.USD.toFixed(2) : data.USD.toPrecision(2);
-        // toPrecision - это два знака неравных нулю
-
-        if (this.selectedTicker?.name === currentTickerName) {
-          this.graph.push(data.USD);
-        }
-      }, 5000);
+    async updateTickers() {
+        const data = await getPrice(this.tickers.map(t => t.name));
+        this.tickers.forEach(elm => {
+          const price = data[elm.name.toUpperCase()];
+          elm.price = price || "-";
+          console.log('selectedTicker ', this.selectedTicker);
+          console.log('elm.name ', elm.name);
+          if (elm.name === this.selectedTicker?.name) {
+            this.graph.push(price);
+          }
+        })
     },
     // а вот это явно должно быть watcher
     changeFlag() {

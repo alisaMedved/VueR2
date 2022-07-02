@@ -10,17 +10,17 @@ const apiBase = axios.create({
     }
 });
 
-export const getPrice = async (currentTickerName) => {
+export const getPrice = async (tickers) => {
     try {
         const res = await apiBase.request({
-            url: `price`,
+            url: `pricemulti`,
             params: {
-                fsym: `${currentTickerName}`,
                 tsyms: 'USD',
+                fsyms: tickers.join(','),
             },
             method: 'get',
         });
-        return res.data;
+        return Object.fromEntries(Object.entries(res.data).map(([key, value]) => ([key, value.USD])));
     } catch {
         return {
             USD: 0,
