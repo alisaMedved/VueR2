@@ -5,7 +5,6 @@
       <add-ticker
           @add-ticker="addFromInput"
           :disabled="overLimitAdded"
-          @add-ticker-autocomplete="addFromAutocomplete"
           :flagAdded="flagAdded"
       />
       <hr class="w-full border-t border-gray-600 my-4" />
@@ -165,7 +164,11 @@ export default {
     const windowData = Object.fromEntries(new URL(window.location).searchParams.entries());
     customAssign(VALID_KEYS, windowData, this);
   },
-
+  provide () {
+    return {
+      addFromAutocomplete: this.addFromAutocomplete,
+    }
+  },
   mounted() {
     window.addEventListener("resize", this.calculateMaxGraphElements);
   },

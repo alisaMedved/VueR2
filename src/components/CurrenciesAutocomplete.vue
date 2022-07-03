@@ -34,14 +34,12 @@ export default {
       required: false,
     },
   },
-  emits: {
-    "add-ticker-autocomplete": value => (typeof value === "object"),
-  },
+  inject: ['addFromAutocomplete'],
   methods: {
     selectAutocompleteOption(selectedOption) {
       console.log(this.alreadyChecked);
       console.log('selectedOption внизу ', selectedOption);
-      this.$emit('add-ticker-autocomplete', selectedOption)
+      this.addFromAutocomplete(selectedOption);
     }
   },
 }

@@ -26,7 +26,6 @@
         :autocompleteOptions="autocompleteOptions"
         :alreadyChecked="alreadyChecked"
         :disabled="disabled"
-        @add-ticker-autocomplete="addFromAutocomplite"
     />
     <add-button
         @click="addFromInput"
@@ -60,7 +59,6 @@ export default {
   },
   emits: {
     "add-ticker": value => (typeof value === 'string'),
-    "add-ticker-autocomplete": value => (typeof value === "object"),
   },
   data() {
     return {
@@ -99,9 +97,6 @@ export default {
     addFromInput() {
     this.$emit('add-ticker', this.ticker);
     this.ticker = "";
-    },
-    addFromAutocomplite(dataEvent) {
-      this.$emit('add-ticker-autocomplete', dataEvent);
     },
     async fetchAllCurrencies() {
       const res = await getAllСurrencies();
