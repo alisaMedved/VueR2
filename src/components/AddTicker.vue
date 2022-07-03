@@ -17,17 +17,17 @@
               class="block w-full pr-10 border-gray-300 text-gray-900 focus:outline-none focus:ring-gray-500 focus:border-gray-500 sm:text-sm rounded-md"
               placeholder="Например DOGE"
           />
-<!--          <div v-if="flagAdded">Эта валюта уже добавлена!</div>-->
-<!--          <button v-for="elm in autocompleteOptions"-->
-<!--                  :key="elm.id"-->
-<!--                  @click="addFromAutocomplete(elm)"-->
-<!--                  class="my-4 inline-flex items-center py-2 px-4 border border-transparent shadow-sm text-sm leading-4 font-medium rounded-full text-white bg-gray-600 hover:bg-gray-700 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"-->
-<!--          >-->
-<!--            {{elm.FullName}}-->
-<!--          </button>-->
+
         </div>
       </div>
     </div>
+    <currencies-autocomplete
+        type="component"
+        :autocompleteOptions="autocompleteOptions"
+        :alreadyChecked="alreadyChecked"
+        :disabled="disabled"
+        @add-ticker-autocomplete="addFromAutocomplite"
+    />
     <add-button
         @click="addFromInput"
         type="button"
@@ -36,11 +36,15 @@
     />
   </section>
 </template>
+
 <script>
+import {getAllСurrencies} from "@/api/baseApi";
 import AddButton from '@/components/AddButton.vue';
+import CurrenciesAutocomplete from '@/components/CurrenciesAutocomplete.vue';
 export default {
   components: {
     AddButton,
+    CurrenciesAutocomplete,
   },
   props: {
     disabled: {
@@ -48,19 +52,65 @@ export default {
       default: false,
       required: false,
     },
+    flagAdded: {
+      type: String,
+      default: '',
+      required: false,
+    },
   },
   emits: {
-    "add-ticker": value => (typeof value === 'boolean'),
+    "add-ticker": value => (typeof value === 'string'),
+    "add-ticker-autocomplete": value => (typeof value === "object"),
   },
   data() {
     return {
       ticker: "",
+      allCurrencies: [],
+    }
+  },
+  created() {
+    this.fetchAllCurrencies();
+  },
+  computed: {
+    autocompleteOptions: function() {
+      if (this.allCurrencies.length && this.ticker) {
+        return this.allCurrencies.filter(elm => elm.FullName.search(new RegExp(this.ticker, 'gi')) !== -1).splice(0, 4);
+      } else {
+        return [];
+      }
+    },
+    alreadyChecked: {
+      get: function() {
+        return Boolean(this.flagAdded);
+      },
+      set: function(newValue) {
+        this.alreadyChecked = newValue;
+      }
+    }
+  },
+  watch: {
+    flagAdded() {
+      if (this.flagAdded) {
+        this.ticker = this.flagAdded;
+      }
     }
   },
   methods: {
     addFromInput() {
     this.$emit('add-ticker', this.ticker);
     this.ticker = "";
+    },
+    addFromAutocomplite(dataEvent) {
+      this.$emit('add-ticker-autocomplete', dataEvent);
+    },
+    async fetchAllCurrencies() {
+      const res = await getAllСurrencies();
+      this.allCurrencies = Object.entries(res).map(([key, valueField]) =>
+          ({...valueField, shortName: key})
+      );
+    },
+    changeFlag() {
+      if (this.alreadyChecked) this.alreadyChecked = false;
     },
   }
 }

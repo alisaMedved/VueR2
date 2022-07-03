@@ -2,7 +2,12 @@
   <div class="container mx-auto flex flex-col items-center bg-gray-100 p-4">
     <div class="container">
       <div class="w-full my-4"></div>
-      <add-ticker @add-ticker="addFromInput" :disabled="overLimitAdded"/>
+      <add-ticker
+          @add-ticker="addFromInput"
+          :disabled="overLimitAdded"
+          @add-ticker-autocomplete="addFromAutocomplete"
+          :flagAdded="flagAdded"
+      />
       <hr class="w-full border-t border-gray-600 my-4" />
       <template v-if="tickers.length">
     <div>
@@ -128,7 +133,7 @@
 // [x] При удалении тикера остается выбор
 
 <script>
-import {getAllСurrencies, getPrice} from "@/api/baseApi";
+import {getPrice} from "@/api/baseApi";
 import {customAssign} from "@/utils/common";
 import AddTicker from "@/components/AddTicker";
 const VALID_KEYS = ['filter', 'page'];
@@ -144,11 +149,10 @@ export default {
       tickers: [],
       selectedTicker: null,
       graph: [],
-      allCurrencies: [],
-      flagAdded: false,
       page: 1,
       filter: "",
       maxGraphElements: 1,
+      flagAdded: '',
     };
   },
   created() {
@@ -157,7 +161,6 @@ export default {
       this.tickers = JSON.parse(mas);
       setInterval(() => this.updateTickers(), 1000);
     }
-    this.fetchAllCurrencies();
 
     const windowData = Object.fromEntries(new URL(window.location).searchParams.entries());
     customAssign(VALID_KEYS, windowData, this);
@@ -179,13 +182,6 @@ export default {
     },
     endIndex: function() {
       return this.page * LIMIT;
-    },
-    autocompleteOptions: function() {
-      if (this.allCurrencies.length && this.ticker) {
-        return this.allCurrencies.filter(elm => elm.FullName.search(new RegExp(this.ticker, 'gi')) !== -1).splice(0, 4);
-      } else {
-        return [];
-      }
     },
     filteredTickers: function() {
       return this.tickers.filter(ticker => ticker.name.includes(this.filter));
@@ -236,7 +232,6 @@ export default {
   },
   methods: {
     calculateMaxGraphElements() {
-      console.log(this.$refs.graph);
       if (!this.$refs.graph) {
         return;
       }
@@ -256,11 +251,11 @@ export default {
       this.add({name: newTicker, id: ""});
     },
     addFromAutocomplete(addedCurrency) {
+      console.log('addedCurrency ', addedCurrency);
       if (!this.tickers.filter(elm => elm.id === addedCurrency.Id).length) {
         this.add({name: addedCurrency.shortName, id: addedCurrency.Id});
       } else {
-        this.ticker = addedCurrency.shortName;
-        this.flagAdded = true;
+        this.flagAdded = addedCurrency.shortName;
       }
     },
     formatPrice(price) {
@@ -275,21 +270,13 @@ export default {
         this.tickers.forEach(elm => {
           const price = data[elm.name.toUpperCase()];
           elm.price = price || "-";
-          console.log('selectedTicker ', this.selectedTicker);
-          console.log('elm.name ', elm.name);
           if (elm.name === this.selectedTicker?.name) {
             this.graph.push(price);
-            console.log('this.graph.length ', this.graph.length);
-            console.log('this.maxGraphs ', this.maxGraphElements);
             if (this.graph.length > this.maxGraphElements) {
               this.graph.splice(0, this.graph.length - this.maxGraphElements);
             }
           }
         })
-    },
-    // а вот это явно должно быть watcher
-    changeFlag() {
-      if (this.flagAdded) this.flagAdded = false;
     },
     select(ticker) {
       this.selectedTicker = ticker;
@@ -301,12 +288,6 @@ export default {
       if (this.selectedTicker === tickerToRemove) {
         this.selectedTicker = null;
       }
-    },
-    async fetchAllCurrencies() {
-      const res = await getAllСurrencies();
-      this.allCurrencies = Object.entries(res).map(([key, valueField]) =>
-          ({...valueField, shortName: key})
-      );
     },
   }
 };
